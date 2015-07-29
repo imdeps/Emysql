@@ -137,6 +137,7 @@ do_gen_call(Msg) ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init([]) ->
+    process_flag(priority, high),
     Pools = lists:map(
         fun (Pool1) ->
                 case emysql_conn:open_connections(Pool1) of
