@@ -752,7 +752,7 @@ monitor_work(Connection0, Timeout, Args) when is_record(Connection0, emysql_conn
        false ->
           Connection0
     end,
-
+    PoolId = Connection#emysql_connection.pool_id,
     %% spawn a new process to do work, then monitor that process until
     %% it either dies, returns data or times out.
     Parent = self(),
@@ -777,8 +777,8 @@ monitor_work(Connection0, Timeout, Args) when is_record(Connection0, emysql_conn
             %% catch if re-open fails and also signal it.
             case emysql_conn:reset_connection(emysql_conn_mgr:pools(), Connection, pass) of
                 {error,FailedReset} ->
-                    exit({Reason, {and_conn_reset_failed, FailedReset}});
-                _ -> exit({Reason, {}})
+                    exit({Reason, {and_conn_reset_failed, FailedReset, PoolId, Args}});
+                _ -> exit({Reason, {PoolId, Args}})
             end;
         {Pid, Result} ->
             %% if the process returns data, unlock the
@@ -793,5 +793,5 @@ monitor_work(Connection0, Timeout, Args) when is_record(Connection0, emysql_conn
         erlang:demonitor(Mref, [flush]),
         exit(Pid, kill),
         emysql_conn:reset_connection(emysql_conn_mgr:pools(), Connection, pass),
-        exit(mysql_timeout)
+        exit({mysql_timeout, PoolId, Args})
     end.

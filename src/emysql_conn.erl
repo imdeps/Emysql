@@ -131,7 +131,7 @@ prepare(Connection, Name, Statement) ->
         OK when is_record(OK, ok_packet) ->
             ok;
         Err when is_record(Err, error_packet) ->
-            exit({failed_to_prepare_statement, Err#error_packet.msg})
+            exit({failed_to_prepare_statement, {Statement, Err#error_packet.msg}})
     end.
 
 unprepare(Connection, Name) when is_atom(Name)->
@@ -155,7 +155,7 @@ open_n_connections(PoolId, N) ->
                 end
             end, {[], []}, lists:seq(1, N));
         _ ->
-            exit(pool_not_found)
+            exit({pool_not_found, PoolId})
     end.
 
 %% @doc Opens connections for the necessary pool.
@@ -217,7 +217,7 @@ open_connection(#pool{pool_id=PoolId, host=Host, port=Port, user=User,
         {error, Reason} ->
              %-% io:format("~p open connection: ... ERROR ~p~n", [self(), Reason]),
              %-% io:format("~p open connection: ... exit with failed_to_connect_to_database~n", [self()]),
-            exit({failed_to_connect_to_database, Reason})
+            exit({failed_to_connect_to_database, {PoolId, Reason}})
     end.
 
 handshake(Sock, User, Password) ->
@@ -225,7 +225,7 @@ handshake(Sock, User, Password) ->
        {ok, #greeting{} = G} -> G;
        {error, Reason} ->
            gen_tcp:close(Sock),
-           exit(Reason)
+           exit({handshake_failed, User, Password, Reason})
    end.
 
 give_manager_control(Socket) ->
@@ -299,7 +299,7 @@ reset_connection(Pools, Conn, StayLocked) ->
                     {error, {cannot_reopen_in_reset, Reason}}
             end;
         undefined ->
-            exit(pool_not_found)
+            exit({pool_not_found, Conn#emysql_connection.pool_id})
     end.
 
 add_monitor_ref(Conn, MonitorRef) ->
@@ -317,7 +317,7 @@ test_connection(Conn, StayLocked) ->
         NewConn when is_record(NewConn, emysql_connection) ->
           NewConn;
         {error, FailedReset} ->
-          exit({connection_down, {and_conn_reset_failed, FailedReset}})
+          exit({connection_down, {and_conn_reset_failed, Conn#emysql_connection.pool_id, FailedReset}})
       end;
     _ ->
        NewConn = Conn#emysql_connection{last_test_time = now_seconds()},
@@ -383,7 +383,7 @@ join([H|T], Sep, Acc) -> join(T, Sep, [Sep, H|Acc]).
 prepare_statement(Connection, StmtName) ->
     case emysql_statements:fetch(StmtName) of
         undefined ->
-            exit(statement_has_not_been_prepared);
+            exit({statement_has_not_been_prepared, StmtName});
         {Version, Statement} ->
             case emysql_statements:version(Connection#emysql_connection.id, StmtName) of
                 Version ->
