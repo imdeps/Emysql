@@ -267,7 +267,8 @@ add_pool(PoolId, Options) when is_list(Options) ->
     Warnings = proplists:get_value(warnings, Options, false),
     add_pool(#pool{pool_id=PoolId,size=Size, user=User, password=Password,
 			  host=Host, port=Port, database=Database,
-			  encoding=Encoding, start_cmds=StartCmds, 
+			  encoding=Encoding, start_cmds=StartCmds,
+              conn_test_period = emysql_app:conn_test_period(),
 			  connect_timeout=ConnectTimeout, warnings=Warnings}).
 
 add_pool(#pool{pool_id=PoolId,size=Size,user=User,password=Password,host=Host,port=Port,
