@@ -331,7 +331,7 @@ test_connection(Conn, StayLocked) ->
 need_test_connection(Conn) ->
    (Conn#emysql_connection.test_period =:= 0) orelse
      (Conn#emysql_connection.last_test_time =:= 0) orelse
-     (Conn#emysql_connection.last_test_time + Conn#emysql_connection.test_period < now_seconds()).
+     (Conn#emysql_connection.last_test_time + (Conn#emysql_connection.test_period div 1000) < now_seconds()).
 
 now_seconds() ->
    {M, S, _} = os:timestamp(),
